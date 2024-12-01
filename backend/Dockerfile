@@ -1,20 +1,18 @@
-# Backend Dockerfile (backend/Dockerfile)
-# Use Node.js as base image
+# Use an official Node.js image as the base image
 FROM node:16
 
-# Set working directory in the container
+# Set the working directory inside the container
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json /app/
-
+# Copy package.json and install dependencies
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy all files into the working directory
-COPY . /app/
+# Copy the rest of the application files
+COPY . ./
 
-# Expose the port the app runs on
-EXPOSE 3001
+# Expose the backend server port
+EXPOSE 3002
 
 # Start the backend server
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

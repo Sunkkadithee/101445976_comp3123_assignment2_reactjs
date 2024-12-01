@@ -1,35 +1,39 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const userRoutes = require("./routes/user");  // Add user routes
-const employeeRoutes = require("./routes/employee");  // Add employee routes
+require("dotenv").config();
+const bodyParser = require("body-parser");
+const cors = require('cors')
 
-const DB_CONNECTION_STRING = "mongodb+srv://Pang:DVAgIps2oDeDLLz6@cluster0.4myr2.mongodb.net/comp3123_assignment1?retryWrites=true&w=majority";
+SERVER_PORT = process.env.PORT || 3002;
 
-mongoose.connect(DB_CONNECTION_STRING, {
+const app = express();
+const DB_URL = "mongodb+srv://Pang:DVAgIps2oDeDLLz6@cluster0.4myr2.mongodb.net/comp3123_assignment1?retryWrites=true&w=majority";
+// Middleware
+app.use(express.json());
+app.use(bodyParser.json());
+app.use(cors({ origin: SERVER_PORT }));
+
+// Import user routes
+const userRouter = require('./routes/user');
+const empRouter = require('./routes/employee')
+
+// Use routes
+app.use('/api/v1/user', userRouter);
+app.use('/api/v1/emp', empRouter);
+
+// MongoDB Connection
+mongoose.connect(DB_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 }).then(() => {
-    console.log("Connected to MongoDB");
-}).catch((err) => {
-    console.log("Error: ", err);
+    console.log("Successfully connected to the database mongoDB Atlas Server");    
+}).catch(err => {
+    console.log('Could not connect to the database. Exiting now...', err);
+    process.exit();
 });
 
-const app = express();
-const SERVER_PORT = 3001;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.listen(SERVER_PORT, ()=> {
+    console.log(`The server is listening on port ${SERVER_PORT}`)
+})
 
-// Routes
-app.use("/api/v1/user", userRoutes);  // User routes for signup, login
-app.use("/api/v1/emp", employeeRoutes);  // Employee routes for CRUD operations
-
-// Base route
-app.get("/", (req, res) => {
-    res.send("<h1>MongoDB + Mongoose Example</h1>");
-});
-
-// Start the server
-app.listen(SERVER_PORT, () => {
-    console.log(`Server running at http://localhost:${SERVER_PORT}/`);
-});

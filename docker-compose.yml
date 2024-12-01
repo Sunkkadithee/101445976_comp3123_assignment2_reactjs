@@ -1,10 +1,11 @@
-# docker-compose.yml
-
-version: '3.8'
+# 
+version: "3.8"
 
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     depends_on:
@@ -13,27 +14,32 @@ services:
       - app-network
 
   backend:
-    build: ./backend
-    environment:
-      - DB_URI=mongodb://mongo:27017/comp3123_assignment1
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend/node_modules:/app/node_modules 
     ports:
-      - "3001:3001"
+      - "3002:3002"
     depends_on:
-      - mongo
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/COMP3123-Assignment
     networks:
       - app-network
 
-  mongo:
-    image: mongo:latest
+  mongodb:
+    image: mongo:6
     container_name: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
     volumes:
       - mongo-data:/data/db
-    networks:
-      - app-network
-
-volumes:
-  mongo-data:
 
 networks:
   app-network:
-    driver: bridge
+
+volumes:
+  mongo-data:

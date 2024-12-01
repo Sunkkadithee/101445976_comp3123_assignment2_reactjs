@@ -1,80 +1,108 @@
-const express = require('express');
-const Employee = require('../models/Employee');
-const { body, validationResult } = require('express-validator');
+const express = require("express");
 const router = express.Router();
+const empModel = require("../models/employees")
+const { body, validationResult } = require("express-validator");
 
-// Get All Employees
-router.get('/employees', async (req, res) => {
-    try {
-        const employees = await Employee.find();
-        res.status(200).json(employees);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+
+router.get('/employees', async(req, res)=> {
+    try{
+        const empAll = await empModel.find();
+        res.status(200).send(empAll)
     }
-});
-
-// Create New Employee
-router.post('/employees', [
-    body('first_name').notEmpty().withMessage('First name is required'),
-    body('last_name').notEmpty().withMessage('Last name is required'),
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('position').notEmpty().withMessage('Position is required'),
-    body('salary').isNumeric().withMessage('Salary must be a number'),
-    body('department').notEmpty().withMessage('Department is required'),
-], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    catch(err){
+        console.log(err)
+        res.send({message: err})
     }
+})
 
-    const employeeData = req.body;
-    try {
-        const employee = new Employee(employeeData);
-        await employee.save();
-        res.status(201).json({ message: 'Employee created successfully.', employee_id: employee._id });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// Get Employee by ID
-router.get('/employees/:eid', async (req, res) => {
-    try {
-        const employee = await Employee.findById(req.params.eid);
-        if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+router.post('/employees', 
+    [body('email').isEmail().withMessage('Invalid email format'),
+    body('salary').isNumeric().withMessage("Salary must be numeric only.")    
+    ],
+    async(req, res)=> {
+    const {first_name, last_name, email, password, 
+        position, salary, date_of_joining, 
+        department, createdAt, updatedAt} = req.body;
+    try{
+        const existingEmail = await empModel.findOne({email})
+        if(existingEmail){
+            return res.status(400).send({message: "This email already exists. "})
         }
-        res.status(200).json(employee);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
-// Update Employee by ID
-router.put('/employees/:eid', async (req, res) => {
-    try {
-        const employee = await Employee.findByIdAndUpdate(req.params.eid, req.body, { new: true });
-        if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+        const newEmp = new empModel({first_name, last_name, email, password, 
+            position, salary, date_of_joining, 
+            department, createdAt, updatedAt});
+        await newEmp.save();
+        res.status(201).send({message: "New Employee is created successfully. "})
+    }catch(err){
+        console.log(err)
+        res.status(500).send({message: "Server error"})
+    }
+})
+
+router.get('/employees/:empId', async (req, res)=> {
+    const { empId } = req.params;
+    try{
+        const employee = await empModel.findById(empId).select('first_name last_name email position salary date_of_joining department')
+        if(!employee){
+            res.status(404).send({message: "Employee not found!"})
         }
-        res.status(200).json({ message: 'Employee details updated successfully.' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
-// Delete Employee by ID
-router.delete('/employees', async (req, res) => {
-    const { eid } = req.query;
-    try {
-        const employee = await Employee.findByIdAndDelete(eid);
-        if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
+        res.status(200).send(employee)
+    }
+    catch(err){ 
+        res.send(err)
+    }
+})
+
+router.put('/employees/:empId', 
+    [body('email').optional().isEmail().withMessage("Invalid email format!")],
+    async (req, res)=> {
+    const {empId} = req.params;
+    const updateData = req.body;
+    try{
+        const employeeUpdate = await empModel.findByIdAndUpdate(
+            empId, 
+            {$set : updateData},
+            {new: true}  
+        )
+        res.status(200).send({ message: "Employee details updated successfully."});
+    }
+    catch(err){
+        res.send(err)
+    }
+})
+
+router.delete('/employees', async(req, res)=> {
+    const empId = req.query.empId
+    try{
+        const deletedEmployee = await empModel.findByIdAndDelete(empId)
+        if(!deletedEmployee){
+            res.status(404).send({message: "Employee not found."})
         }
-        res.status(204).json({ message: 'Employee deleted successfully.' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+        res.status(204).send({message: "Employee deleted successfully."})
 
-module.exports = router;
+    }
+    catch(err){
+        res.send(err)
+    }
+})
+
+router.get('/employees/search', async (req, res) => {
+    const {department, position} = req.query;
+
+    const query ={}
+    if (department) query.department = department
+    if (position) query.position = position
+
+    try {
+        const employees = await empModel.find(query);
+        res.status(200).send(employees);
+    } catch (err) {
+        res.status(500).send({ message: "Error searching employees", error: err });
+    }
+
+})
+
+
+module.exports = router
